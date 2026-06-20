@@ -1,0 +1,10 @@
+{
+  "name": "smm-chatbot",
+  "version": "1.0.0",
+  "description": "MotherSMM AI Chatbot — Vercel Edge deployment",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {}
+}

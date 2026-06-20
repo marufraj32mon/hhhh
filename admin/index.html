@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MotherSMM Chatbot — Admin Panel</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f0f1a; color: #e2e8f0; min-height: 100vh; }
+
+  /* ── Login ── */
+  #login-screen {
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh; padding: 20px;
+  }
+  .login-card {
+    background: #1e1b4b; border: 1px solid #312e81; border-radius: 20px;
+    padding: 40px; width: 100%; max-width: 380px; text-align: center;
+  }
+  .login-card h1 { font-size: 24px; margin-bottom: 8px; color: #a78bfa; }
+  .login-card p  { color: #94a3b8; font-size: 14px; margin-bottom: 28px; }
+  .login-input {
+    width: 100%; padding: 12px 16px; border-radius: 12px;
+    border: 1.5px solid #312e81; background: #0f172a; color: #e2e8f0;
+    font-size: 15px; margin-bottom: 14px; outline: none;
+    transition: border-color .2s;
+  }
+  .login-input:focus { border-color: #7c3aed; }
+  .login-btn {
+    width: 100%; padding: 13px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: opacity .2s;
+  }
+  .login-btn:hover { opacity: .9; }
+  .login-error { color: #f87171; font-size: 13px; margin-top: 10px; }
+
+  /* ── Main Layout ── */
+  #app { display: none; min-height: 100vh; }
+
+  .topbar {
+    background: #1e1b4b; border-bottom: 1px solid #312e81;
+    padding: 14px 28px; display: flex; align-items: center; gap: 14px;
+  }
+  .topbar-logo { font-size: 20px; font-weight: 700; color: #a78bfa; flex: 1; }
+  .topbar-badge {
+    background: #7c3aed22; border: 1px solid #7c3aed55; color: #a78bfa;
+    padding: 4px 12px; border-radius: 20px; font-size: 12px;
+  }
+  .topbar-logout {
+    background: #1e293b; border: 1px solid #334155; color: #94a3b8;
+    padding: 7px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+    transition: all .2s;
+  }
+  .topbar-logout:hover { border-color: #7c3aed; color: #a78bfa; }
+
+  .layout { display: flex; min-height: calc(100vh - 57px); }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 220px; flex-shrink: 0; background: #13102b;
+    border-right: 1px solid #1e1b4b; padding: 20px 12px;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-radius: 10px; cursor: pointer; font-size: 14px; color: #94a3b8;
+    transition: all .2s; margin-bottom: 4px; border: none; background: none;
+    width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: #1e1b4b; color: #e2e8f0; }
+  .nav-item.active { background: #7c3aed22; color: #a78bfa; border: 1px solid #7c3aed33; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  /* ── Content ── */
+  .content { flex: 1; padding: 28px; overflow-y: auto; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .page-title { font-size: 22px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px; }
+  .page-sub   { color: #94a3b8; font-size: 14px; margin-bottom: 24px; }
+
+  /* ── Cards ── */
+  .card {
+    background: #1e1b4b; border: 1px solid #2d2a6e; border-radius: 16px;
+    padding: 24px; margin-bottom: 20px;
+  }
+  .card-title { font-size: 15px; font-weight: 600; color: #a78bfa; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 8px; }
+
+  /* ── Form ── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid.single { grid-template-columns: 1fr; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: .5px; }
+  .field input, .field textarea, .field select {
+    background: #0f172a; border: 1.5px solid #2d2a6e; border-radius: 10px;
+    padding: 10px 14px; color: #e2e8f0; font-size: 14px; outline: none;
+    transition: border-color .2s; font-family: inherit;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color: #7c3aed; }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field select option { background: #1e1b4b; }
+
+  /* Color preview */
+  .color-row { display: flex; gap: 10px; align-items: center; }
+  .color-row input[type=color] {
+    width: 44px; height: 44px; padding: 2px; cursor: pointer; border-radius: 10px;
+  }
+  .color-preview {
+    flex: 1; height: 44px; border-radius: 10px; border: 1.5px solid #2d2a6e;
+    display: flex; align-items: center; padding: 0 14px; font-size: 13px; color: #94a3b8;
+  }
+
+  /* Suggestion tags */
+  .tags-input { display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    background: #0f172a; border: 1.5px solid #2d2a6e; border-radius: 10px;
+    padding: 8px 12px; min-height: 46px; }
+  .tag {
+    background: #7c3aed33; border: 1px solid #7c3aed66; color: #a78bfa;
+    padding: 3px 10px; border-radius: 20px; font-size: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tag-remove { cursor: pointer; opacity: .7; }
+  .tag-remove:hover { opacity: 1; }
+  .tag-input-inner {
+    border: none; background: none; outline: none; color: #e2e8f0;
+    font-size: 13px; min-width: 120px; font-family: inherit;
+  }
+
+  /* Save button */
+  .save-btn {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    border: none; color: #fff; padding: 12px 28px; border-radius: 12px;
+    font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity .2s;
+    margin-top: 8px;
+  }
+  .save-btn:hover { opacity: .9; }
+  .save-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+    background: #10b981; color: #fff; padding: 12px 20px; border-radius: 12px;
+    font-size: 14px; font-weight: 500; opacity: 0; transform: translateY(10px);
+    transition: all .3s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.error { background: #ef4444; }
+
+  /* Embed code */
+  .code-block {
+    background: #0a0a1a; border: 1px solid #1e1b4b; border-radius: 10px;
+    padding: 16px; font-family: 'Courier New', monospace; font-size: 13px;
+    color: #a78bfa; overflow-x: auto; line-height: 1.6; position: relative;
+  }
+  .copy-btn {
+    position: absolute; top: 10px; right: 10px;
+    background: #7c3aed33; border: 1px solid #7c3aed66; color: #a78bfa;
+    padding: 4px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+    transition: all .2s;
+  }
+  .copy-btn:hover { background: #7c3aed55; }
+
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .stat-card {
+    background: #1e1b4b; border: 1px solid #2d2a6e; border-radius: 14px;
+    padding: 18px; text-align: center;
+  }
+  .stat-num { font-size: 28px; font-weight: 700; color: #a78bfa; }
+  .stat-label { font-size: 12px; color: #64748b; margin-top: 4px; }
+
+  /* Preview box */
+  .preview-wrap { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
+  .preview-box {
+    width: 320px; background: #0f0f1a; border-radius: 16px; overflow: hidden;
+    border: 1px solid #2d2a6e; flex-shrink: 0;
+  }
+  .preview-header {
+    padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .preview-avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.2);
+    display: flex; align-items: center; justify-content: center; font-size: 16px;
+  }
+  .preview-name { font-weight: 700; font-size: 14px; }
+  .preview-status { font-size: 11px; opacity: .8; margin-top: 1px; }
+  .preview-body { background: #fff; padding: 14px; min-height: 100px; }
+  .preview-bubble {
+    background: #f1f5f9; border-radius: 14px; border-bottom-left-radius: 4px;
+    padding: 10px 14px; font-size: 13px; color: #1e293b; line-height: 1.5;
+    max-width: 240px;
+  }
+  .preview-input {
+    padding: 10px 14px; background: #f8fafc; border-top: 1px solid #e2e8f0;
+    display: flex; gap: 8px;
+  }
+  .preview-input-inner {
+    flex: 1; background: #fff; border: 1.5px solid #e2e8f0;
+    border-radius: 20px; padding: 6px 12px; font-size: 12px; color: #94a3b8;
+  }
+  .preview-send {
+    width: 32px; height: 32px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; color: #fff; font-size: 14px;
+  }
+
+  @media(max-width:640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-card">
+    <div style="font-size:40px;margin-bottom:12px">🤖</div>
+    <h1>Chatbot Admin</h1>
+    <p>MotherSMM AI Assistant Control Panel</p>
+    <input type="password" class="login-input" id="pw-input" placeholder="Enter admin password"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Sign In →</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">🤖 MotherSMM Chatbot Admin</div>
+    <span class="topbar-badge">v1.0</span>
+    <button class="topbar-logout" onclick="doLogout()">Sign Out</button>
+  </div>
+  <div class="layout">
+    <div class="sidebar">
+      <button class="nav-item active" onclick="showPage('overview')" id="nav-overview">
+        <span class="icon">📊</span> Overview
+      </button>
+      <button class="nav-item" onclick="showPage('appearance')" id="nav-appearance">
+        <span class="icon">🎨</span> Appearance
+      </button>
+      <button class="nav-item" onclick="showPage('behavior')" id="nav-behavior">
+        <span class="icon">🧠</span> AI Behavior
+      </button>
+      <button class="nav-item" onclick="showPage('suggestions')" id="nav-suggestions">
+        <span class="icon">💬</span> Suggestions
+      </button>
+      <button class="nav-item" onclick="showPage('embed')" id="nav-embed">
+        <span class="icon">🔗</span> Embed Code
+      </button>
+    </div>
+    <div class="content">
+
+      <!-- Overview -->
+      <div class="page active" id="page-overview">
+        <div class="page-title">Overview</div>
+        <div class="page-sub">Your chatbot status and quick configuration</div>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-num">✅</div><div class="stat-label">Bot Status</div></div>
+          <div class="stat-card"><div class="stat-num" id="stat-tools">10</div><div class="stat-label">API Tools</div></div>
+          <div class="stat-card"><div class="stat-num">∞</div><div class="stat-label">Languages</div></div>
+          <div class="stat-card"><div class="stat-num">Edge</div><div class="stat-label">Runtime</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">🚀 Quick Setup Checklist</div>
+          <div style="display:flex;flex-direction:column;gap:10px;font-size:14px">
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="chk1" onchange="saveChecks()"> Set <code>ANTHROPIC_API_KEY</code> in Vercel env vars
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="chk2" onchange="saveChecks()"> Set <code>SMM_API_KEY</code> in Vercel env vars
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="chk3" onchange="saveChecks()"> Set <code>ADMIN_PASSWORD</code> in Vercel env vars
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="chk4" onchange="saveChecks()"> Add widget embed code to your site
+            </label>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="checkbox" id="chk5" onchange="saveChecks()"> Test chat with a real order ID
+            </label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⚙️ Environment Variables</div>
+          <div style="font-size:13px;line-height:2;color:#94a3b8">
+            Set these in your <strong style="color:#a78bfa">Vercel Project → Settings → Environment Variables</strong>:<br>
+            <div class="code-block" style="margin-top:12px">
+ANTHROPIC_API_KEY=sk-ant-...        <span style="color:#64748b"># required</span>
+SMM_API_KEY=your-mothersmm-api-key  <span style="color:#64748b"># required</span>
+ADMIN_PASSWORD=your-secure-password <span style="color:#64748b"># required</span>
+BOT_NAME=MotherSMM AI Assistant     <span style="color:#64748b"># optional</span>
+SITE_NAME=MotherSMM                 <span style="color:#64748b"># optional</span>
+WIDGET_COLOR=#7C3AED                <span style="color:#64748b"># optional</span>
+SUGGESTIONS=Check order,Pricing,Support  <span style="color:#64748b"># optional</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Appearance -->
+      <div class="page" id="page-appearance">
+        <div class="page-title">Appearance</div>
+        <div class="page-sub">Customize how the chat widget looks on your site</div>
+        <div class="preview-wrap">
+          <div style="flex:1;min-width:280px">
+            <div class="card">
+              <div class="card-title">🎨 Widget Colors & Style</div>
+              <div class="form-grid single" style="gap:16px">
+                <div class="field">
+                  <label>Widget Color</label>
+                  <div class="color-row">
+                    <input type="color" id="f-color" value="#7C3AED" oninput="updatePreview()">
+                    <div class="color-preview" id="color-preview-text">
+                      <span id="color-hex">#7C3AED</span> — Click to pick color
+                    </div>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Bot Avatar Emoji</label>
+                  <input type="text" id="f-emoji" value="🤖" maxlength="4" oninput="updatePreview()" placeholder="🤖">
+                </div>
+                <div class="field">
+                  <label>Bot Name</label>
+                  <input type="text" id="f-botname" value="MotherSMM AI Assistant" oninput="updatePreview()">
+                </div>
+                <div class="field">
+                  <label>Button Shape</label>
+                  <select id="f-shape">
+                    <option value="circle">Circle</option>
+                    <option value="rounded">Rounded Square</option>
+                    <option value="square">Square</option>
+                  </select>
+                </div>
+              </div>
+              <div style="margin-top:16px">
+                <button class="save-btn" onclick="saveAppearance()">Save Appearance</button>
+              </div>
+            </div>
+          </div>
+          <!-- Live Preview -->
+          <div>
+            <div style="font-size:12px;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Live Preview</div>
+            <div class="preview-box" id="preview-box">
+              <div class="preview-header" id="preview-header" style="background:linear-gradient(135deg,#7C3AED,#6d28d9cc)">
+                <div class="preview-avatar" id="preview-avatar">🤖</div>
+                <div>
+                  <div class="preview-name" id="preview-name">MotherSMM AI Assistant</div>
+                  <div class="preview-status">● Online</div>
+                </div>
+              </div>
+              <div class="preview-body">
+                <div class="preview-bubble" id="preview-bubble">
+                  👋 Welcome! How can I help you today?
+                </div>
+              </div>
+              <div class="preview-input">
+                <div class="preview-input-inner">Type a message...</div>
+                <div class="preview-send" id="preview-send" style="background:#7C3AED">➤</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Behavior -->
+      <div class="page" id="page-behavior">
+        <div class="page-title">AI Behavior</div>
+        <div class="page-sub">Control how the AI responds and what it says</div>
+        <div class="card">
+          <div class="card-title">🧠 Response Settings</div>
+          <div class="form-grid single" style="gap:16px">
+            <div class="field">
+              <label>Site Name (used in bot intro)</label>
+              <input type="text" id="f-sitename" value="MotherSMM" placeholder="MotherSMM">
+            </div>
+            <div class="field">
+              <label>Welcome Message</label>
+              <textarea id="f-welcome" rows="4" placeholder="Welcome message shown to new users...">👋 Welcome to MotherSMM AI Assistant!
+
+I can help you with:
+• Order status & history
+• Payment transactions
+• Support tickets
+• Service pricing & cost calculator
+
+Just type your question!</textarea>
+            </div>
+            <div class="field">
+              <label>Bot Personality / Tone</label>
+              <textarea id="f-personality" rows="3" placeholder="Describe how the bot should talk...">Friendly, fast, and professional. Always respond in the same language the user writes in (auto-detect Bengali, English, Arabic, etc).</textarea>
+            </div>
+            <div class="field">
+              <label>Custom Instructions (extra rules for the AI)</label>
+              <textarea id="f-instructions" rows="4" placeholder="e.g. Always mention our Telegram support @MotherSMM for critical issues. Never reveal internal service IDs."></textarea>
+            </div>
+            <div class="field">
+              <label>AI Staff Name (shown when bot creates tickets/replies)</label>
+              <input type="text" id="f-staffname" value="AI Assistant" placeholder="AI Assistant">
+            </div>
+          </div>
+          <div style="margin-top:16px">
+            <button class="save-btn" onclick="saveBehavior()">Save Behavior Settings</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🔧 Available Tools</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;font-size:13px">
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">🔍 getOrder</div>
+              <div style="color:#64748b">Order status, charge, link, remains</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">📋 listOrders</div>
+              <div style="color:#64748b">Filter by user, status, date</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">💳 getPayments</div>
+              <div style="color:#64748b">Payment history by user/status</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">🎫 getTicket</div>
+              <div style="color:#64748b">Full ticket with all messages</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">📝 createTicket</div>
+              <div style="color:#64748b">Open support ticket for user</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">↩️ replyTicket</div>
+              <div style="color:#64748b">Reply to existing ticket</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">👤 getUser</div>
+              <div style="color:#64748b">Balance, status, orders, rates</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">💰 getServicePricing</div>
+              <div style="color:#64748b">All services with price/1000</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">🧮 calculateOrderCost</div>
+              <div style="color:#64748b">Cost for service + quantity</div>
+            </div>
+            <div style="background:#0f172a;border:1px solid #1e1b4b;border-radius:10px;padding:12px">
+              <div style="color:#a78bfa;font-weight:600;margin-bottom:4px">📃 listTickets</div>
+              <div style="color:#64748b">Ticket list by user/status</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Suggestions -->
+      <div class="page" id="page-suggestions">
+        <div class="page-title">Quick Suggestions</div>
+        <div class="page-sub">Buttons shown to users when they first open the chat</div>
+        <div class="card">
+          <div class="card-title">💬 Suggestion Chips</div>
+          <div style="margin-bottom:12px;font-size:13px;color:#94a3b8">
+            Type a suggestion and press Enter to add. These appear as clickable buttons in the widget.
+          </div>
+          <div class="tags-input" id="tags-container">
+            <input class="tag-input-inner" id="tag-input" placeholder="Type and press Enter..."
+              onkeydown="handleTagInput(event)">
+          </div>
+          <div style="margin-top:16px">
+            <button class="save-btn" onclick="saveSuggestions()">Save Suggestions</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Embed Code -->
+      <div class="page" id="page-embed">
+        <div class="page-title">Embed Code</div>
+        <div class="page-sub">Add the chatbot to your website</div>
+        <div class="card">
+          <div class="card-title">🔗 Widget Script Tag</div>
+          <div style="margin-bottom:12px;font-size:13px;color:#94a3b8">
+            Add this single line to your website's HTML — works on any page, CMS, or theme.
+          </div>
+          <div class="code-block" id="embed-code">
+            <button class="copy-btn" onclick="copyEmbed()">Copy</button>
+            <span id="embed-text">&lt;script src="https://YOUR-VERCEL-URL.vercel.app/widget.js"&gt;&lt;/script&gt;</span>
+          </div>
+          <div style="margin-top:16px;font-size:13px;color:#94a3b8">
+            Replace <code style="color:#a78bfa">YOUR-VERCEL-URL</code> with your actual Vercel deployment URL.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🚀 Deployment Steps</div>
+          <ol style="font-size:14px;line-height:2;color:#94a3b8;padding-left:20px">
+            <li>Install Vercel CLI: <code style="color:#a78bfa">npm i -g vercel</code></li>
+            <li>In the project folder: <code style="color:#a78bfa">vercel login</code></li>
+            <li>Deploy: <code style="color:#a78bfa">vercel --prod</code></li>
+            <li>Set environment variables in Vercel dashboard</li>
+            <li>Copy the deployment URL and paste it in the embed code above</li>
+            <li>Paste the script tag into your website's <code style="color:#a78bfa">&lt;body&gt;</code></li>
+          </ol>
+        </div>
+        <div class="card">
+          <div class="card-title">📁 Project File Structure</div>
+          <div class="code-block">
+smm-chatbot/
+├── api/
+│   └── chat.js          ← Vercel Edge Function (all API routes)
+├── public/
+│   └── widget.js        ← Embeddable chat widget
+├── admin/
+│   └── index.html       ← This admin panel
+├── vercel.json          ← Routing config
+└── package.json
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /layout -->
+</div><!-- /app -->
+
+<div id="toast">✓ Saved successfully</div>
+
+<script>
+var API_BASE = window.location.origin;
+var authToken = localStorage.getItem('smm_admin_token') || '';
+var suggestions = ['Check order status', 'Payment history', 'Support tickets', 'Instagram followers price', 'Calculate order cost'];
+
+// ── Auth ─────────────────────────────────────────
+function doLogin() {
+  var pw = document.getElementById('pw-input').value;
+  if (!pw) return;
+  fetch(API_BASE + '/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password: pw })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.token) {
+      authToken = data.token;
+      localStorage.setItem('smm_admin_token', authToken);
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'block';
+      loadSettings();
+      loadChecks();
+      renderTags();
+    } else {
+      document.getElementById('login-err').textContent = '❌ ' + (data.error || 'Invalid password');
+    }
+  })
+  .catch(() => {
+    // Dev mode: allow any password when API not yet deployed
+    authToken = 'dev-mode';
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadChecks();
+    renderTags();
+    showToast('⚠️ Dev mode — API not connected', true);
+  });
+}
+
+function doLogout() {
+  localStorage.removeItem('smm_admin_token');
+  location.reload();
+}
+
+// Auto-login if token saved
+if (authToken) {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadSettings();
+  loadChecks();
+  renderTags();
+}
+
+// ── Pages ──────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+// ── Settings load/save ─────────────────────────────
+function loadSettings() {
+  fetch(API_BASE + '/api/admin/settings', {
+    headers: { 'Authorization': 'Bearer ' + authToken }
+  })
+  .then(r => r.json())
+  .then(s => {
+    if (s.error) return;
+    if (s.botName)    document.getElementById('f-botname').value = s.botName;
+    if (s.siteName)   document.getElementById('f-sitename').value = s.siteName;
+    if (s.widgetColor){ document.getElementById('f-color').value = s.widgetColor; document.getElementById('color-hex').textContent = s.widgetColor; }
+    if (s.avatarEmoji) document.getElementById('f-emoji').value = s.avatarEmoji;
+    if (s.buttonShape) document.getElementById('f-shape').value = s.buttonShape;
+    if (s.welcomeMessage) document.getElementById('f-welcome').value = s.welcomeMessage;
+    if (s.personality)    document.getElementById('f-personality').value = s.personality;
+    if (s.customInstructions) document.getElementById('f-instructions').value = s.customInstructions;
+    if (s.staffName)   document.getElementById('f-staffname').value = s.staffName;
+    if (s.suggestions) { suggestions = s.suggestions; renderTags(); }
+    updatePreview();
+  })
+  .catch(() => {});
+}
+
+function saveSettings(extra) {
+  var s = Object.assign({
+    botName: document.getElementById('f-botname').value,
+    siteName: document.getElementById('f-sitename').value,
+    widgetColor: document.getElementById('f-color').value,
+    avatarEmoji: document.getElementById('f-emoji').value,
+    buttonShape: document.getElementById('f-shape').value,
+    welcomeMessage: document.getElementById('f-welcome').value,
+    personality: document.getElementById('f-personality').value,
+    customInstructions: document.getElementById('f-instructions').value,
+    staffName: document.getElementById('f-staffname').value,
+    suggestions: suggestions,
+  }, extra || {});
+
+  return fetch(API_BASE + '/api/admin/settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+    body: JSON.stringify(s)
+  }).then(r => r.json());
+}
+
+function saveAppearance()  { saveSettings().then(() => { updatePreview(); showToast('Appearance saved!'); }); }
+function saveBehavior()    { saveSettings().then(() => showToast('Behavior saved!')); }
+function saveSuggestions() { saveSettings().then(() => showToast('Suggestions saved!')); }
+
+// ── Preview ────────────────────────────────────────
+function updatePreview() {
+  var color  = document.getElementById('f-color').value || '#7C3AED';
+  var emoji  = document.getElementById('f-emoji').value || '🤖';
+  var name   = document.getElementById('f-botname').value || 'AI Assistant';
+  document.getElementById('color-hex').textContent = color;
+  document.getElementById('preview-header').style.background = 'linear-gradient(135deg,' + color + ',' + color + 'cc)';
+  document.getElementById('preview-avatar').textContent = emoji;
+  document.getElementById('preview-name').textContent = name;
+  document.getElementById('preview-send').style.background = color;
+  document.getElementById('color-preview-text').style.borderLeft = '4px solid ' + color;
+}
+
+// ── Suggestions Tags ───────────────────────────────
+function renderTags() {
+  var c = document.getElementById('tags-container');
+  var inp = document.getElementById('tag-input');
+  c.innerHTML = '';
+  suggestions.forEach(function(s, i) {
+    var tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.innerHTML = s + ' <span class="tag-remove" onclick="removeTag(' + i + ')">×</span>';
+    c.appendChild(tag);
+  });
+  c.appendChild(inp);
+}
+
+function removeTag(i) {
+  suggestions.splice(i, 1);
+  renderTags();
+}
+
+function handleTagInput(e) {
+  if (e.key === 'Enter') {
+    var val = e.target.value.trim();
+    if (val && suggestions.length < 8) {
+      suggestions.push(val);
+      e.target.value = '';
+      renderTags();
+    }
+  }
+}
+
+// ── Checklist ──────────────────────────────────────
+function saveChecks() {
+  var checks = [1,2,3,4,5].map(function(i) {
+    return document.getElementById('chk'+i).checked;
+  });
+  localStorage.setItem('smm_admin_checks', JSON.stringify(checks));
+}
+function loadChecks() {
+  try {
+    var checks = JSON.parse(localStorage.getItem('smm_admin_checks') || '[]');
+    checks.forEach(function(v, i) {
+      var el = document.getElementById('chk'+(i+1));
+      if (el) el.checked = v;
+    });
+  } catch(e) {}
+}
+
+// ── Embed code ─────────────────────────────────────
+function copyEmbed() {
+  var text = '<script src="' + location.origin + '/widget.js"><\/script>';
+  navigator.clipboard.writeText(text).then(function() { showToast('Embed code copied!'); });
+}
+document.getElementById('embed-text').textContent = '<script src="' + location.origin + '/widget.js"><\/script>';
+
+// ── Toast ──────────────────────────────────────────
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show' + (isError ? ' error' : '');
+  setTimeout(function() { t.className = ''; }, 3000);
+}
+
+// ── Enter key for login ────────────────────────────
+document.getElementById('pw-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doLogin();
+});
+
+updatePreview();
+</script>
+</body>
+</html>
