@@ -38,141 +38,136 @@ async function smmPost(path, body) {
 }
 
 // ═══════════════════════════════════════════════════════════
-// TOOL DEFINITIONS (Claude sees these)
+// TOOL DEFINITIONS (Gemini format)
 // ═══════════════════════════════════════════════════════════
 
 const TOOLS = [
   {
-    name: 'getOrder',
-    description: 'Fetch full details of a single order by ID: status, charge, link, remains, service name, created date, available actions.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        order_id: { type: 'integer', description: 'The numeric order ID' },
-      },
-      required: ['order_id'],
-    },
-  },
-  {
-    name: 'listOrders',
-    description: 'List recent orders. Filter by username, order status, or date range. Returns id, status, service_name, charge, remains, link, created.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        user: { type: 'string', description: 'Filter by username' },
-        order_status: {
-          type: 'string',
-          enum: ['pending', 'in_progress', 'processing', 'completed', 'partial', 'canceled', 'error', 'fail'],
+    functionDeclarations: [
+      {
+        name: 'getOrder',
+        description: 'Fetch full details of a single order by ID: status, charge, link, remains, service name, created date, available actions.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            order_id: { type: 'INTEGER', description: 'The numeric order ID' },
+          },
+          required: ['order_id'],
         },
-        created_from: { type: 'integer', description: 'UNIX timestamp lower bound' },
-        created_to: { type: 'integer', description: 'UNIX timestamp upper bound' },
-        limit: { type: 'integer', description: 'Max results 1-100, default 10' },
       },
-    },
-  },
-  {
-    name: 'getPayments',
-    description: 'Get payment / transaction history for a user. Filter by username, email, or payment status.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        username: { type: 'string', description: 'Filter by username' },
-        user_email: { type: 'string', description: 'Filter by email' },
-        payment_status: {
-          type: 'string',
-          enum: ['waiting', 'completed', 'pending', 'fail', 'expired', 'hold', 'underpaid'],
+      {
+        name: 'listOrders',
+        description: 'List recent orders. Filter by username, order status, or date range.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            user: { type: 'STRING', description: 'Filter by username' },
+            order_status: { type: 'STRING', description: 'pending, in_progress, processing, completed, partial, canceled, error, fail' },
+            created_from: { type: 'INTEGER', description: 'UNIX timestamp lower bound' },
+            created_to: { type: 'INTEGER', description: 'UNIX timestamp upper bound' },
+            limit: { type: 'INTEGER', description: 'Max results 1-100, default 10' },
+          },
         },
-        limit: { type: 'integer', description: 'Max results, default 10' },
       },
-    },
-  },
-  {
-    name: 'getTicket',
-    description: 'Get full details of a support ticket including all messages and replies.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        ticket_id: { type: 'integer', description: 'The ticket ID' },
-      },
-      required: ['ticket_id'],
-    },
-  },
-  {
-    name: 'listTickets',
-    description: 'List support tickets. Filter by username or status.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        user: { type: 'string', description: 'Filter by username' },
-        status: {
-          type: 'string',
-          enum: ['pending', 'answered', 'closed', 'locked'],
+      {
+        name: 'getPayments',
+        description: 'Get payment/transaction history. Filter by username, email, or payment status.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            username: { type: 'STRING', description: 'Filter by username' },
+            user_email: { type: 'STRING', description: 'Filter by email' },
+            payment_status: { type: 'STRING', description: 'waiting, completed, pending, fail, expired, hold, underpaid' },
+            limit: { type: 'INTEGER', description: 'Max results, default 10' },
+          },
         },
-        limit: { type: 'integer', description: 'Max results, default 10' },
       },
-    },
-  },
-  {
-    name: 'createTicket',
-    description: 'Create a new support ticket for a user on their behalf.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        username: { type: 'string', description: 'Username of the user' },
-        user_email: { type: 'string', description: 'Email of the user (alternative to username)' },
-        subject: { type: 'string', description: 'Ticket subject' },
-        message: { type: 'string', description: 'Ticket message body' },
-        staff_name: { type: 'string', description: 'Name shown as sender, e.g. "AI Assistant"', default: 'AI Assistant' },
+      {
+        name: 'getTicket',
+        description: 'Get full details of a support ticket including all messages and replies.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            ticket_id: { type: 'INTEGER', description: 'The ticket ID' },
+          },
+          required: ['ticket_id'],
+        },
       },
-      required: ['subject', 'message'],
-    },
-  },
-  {
-    name: 'replyTicket',
-    description: 'Reply to an existing support ticket with an admin message.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        ticket_id: { type: 'integer', description: 'The ticket ID to reply to' },
-        message: { type: 'string', description: 'The reply message' },
-        staff_name: { type: 'string', description: 'Staff name shown on reply', default: 'AI Assistant' },
+      {
+        name: 'listTickets',
+        description: 'List support tickets. Filter by username or status.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            user: { type: 'STRING', description: 'Filter by username' },
+            status: { type: 'STRING', description: 'pending, answered, closed, locked' },
+            limit: { type: 'INTEGER', description: 'Max results, default 10' },
+          },
+        },
       },
-      required: ['ticket_id', 'message'],
-    },
-  },
-  {
-    name: 'getUser',
-    description: 'Look up a user account by username or email. Returns balance, status, registration date, custom rates.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        username: { type: 'string', description: 'Username to look up' },
-        email: { type: 'string', description: 'Email to look up (alternative)' },
+      {
+        name: 'createTicket',
+        description: 'Create a new support ticket for a user.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            username: { type: 'STRING', description: 'Username of the user' },
+            user_email: { type: 'STRING', description: 'Email of the user (alternative to username)' },
+            subject: { type: 'STRING', description: 'Ticket subject' },
+            message: { type: 'STRING', description: 'Ticket message body' },
+            staff_name: { type: 'STRING', description: 'Name shown as sender' },
+          },
+          required: ['subject', 'message'],
+        },
       },
-    },
-  },
-  {
-    name: 'getServicePricing',
-    description: 'Get list of available SMM services with pricing per 1000 units. Can filter by platform or keyword. Returns service_id, name, category, rate, min, max.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        query: { type: 'string', description: 'Search keyword: platform name like "Instagram", "TikTok", "YouTube", or service type like "followers", "likes", "views"' },
-        limit: { type: 'integer', description: 'Max results to return, default 20', default: 20 },
+      {
+        name: 'replyTicket',
+        description: 'Reply to an existing support ticket.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            ticket_id: { type: 'INTEGER', description: 'The ticket ID to reply to' },
+            message: { type: 'STRING', description: 'The reply message' },
+            staff_name: { type: 'STRING', description: 'Staff name shown on reply' },
+          },
+          required: ['ticket_id', 'message'],
+        },
       },
-    },
-  },
-  {
-    name: 'calculateOrderCost',
-    description: 'Calculate the cost of ordering a specific service for a given quantity using the service rate.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        service_id: { type: 'integer', description: 'Service ID from getServicePricing' },
-        quantity: { type: 'integer', description: 'Number of units to order' },
+      {
+        name: 'getUser',
+        description: 'Look up a user account by username or email. Returns balance, status, registration date, custom rates.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            username: { type: 'STRING', description: 'Username to look up' },
+            email: { type: 'STRING', description: 'Email to look up (alternative)' },
+          },
+        },
       },
-      required: ['service_id', 'quantity'],
-    },
+      {
+        name: 'getServicePricing',
+        description: 'Get list of available SMM services with pricing per 1000 units. Filter by platform or keyword.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            query: { type: 'STRING', description: 'Search keyword e.g. "Instagram", "TikTok", "followers", "likes"' },
+            limit: { type: 'INTEGER', description: 'Max results to return, default 20' },
+          },
+        },
+      },
+      {
+        name: 'calculateOrderCost',
+        description: 'Calculate the cost of ordering a specific service for a given quantity.',
+        parameters: {
+          type: 'OBJECT',
+          properties: {
+            service_id: { type: 'INTEGER', description: 'Service ID from getServicePricing' },
+            quantity: { type: 'INTEGER', description: 'Number of units to order' },
+          },
+          required: ['service_id', 'quantity'],
+        },
+      },
+    ],
   },
 ];
 
@@ -557,62 +552,82 @@ export default async function handler(req) {
 
     const settings = getDefaultSettings();
 
-    // Agentic loop — Claude calls tools, we run them, repeat up to 6 rounds
-    let loopMessages = messages.map(m => ({ role: m.role, content: m.content }));
+    // Convert messages to Gemini format
+    // Gemini uses 'user' / 'model' roles (not 'assistant')
+    // and content is array of {text} parts
+    function toGeminiHistory(msgs) {
+      return msgs.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) }],
+      }));
+    }
+
+    const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+    // Agentic loop — Gemini calls tools, we run them, repeat up to 6 rounds
+    // Gemini keeps history differently: we send full contents array each time
+    let geminiContents = toGeminiHistory(messages);
     let finalText = '';
 
     for (let round = 0; round < 6; round++) {
-      const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+      const geminiRes = await fetch(GEMINI_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.ANTHROPIC_API_KEY || '',
-          'anthropic-version': '2023-06-01',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1024,
-          system: buildSystemPrompt(settings),
+          system_instruction: { parts: [{ text: buildSystemPrompt(settings) }] },
           tools: TOOLS,
-          messages: loopMessages,
+          contents: geminiContents,
+          generationConfig: { maxOutputTokens: 1024, temperature: 0.4 },
         }),
       });
 
-      if (!claudeRes.ok) {
-        const err = await claudeRes.text();
+      if (!geminiRes.ok) {
+        const err = await geminiRes.text();
         return json({ error: 'AI error', detail: err }, 500, cors);
       }
 
-      const claudeData = await claudeRes.json();
-
-      if (claudeData.stop_reason === 'end_turn') {
-        finalText = claudeData.content
-          .filter(b => b.type === 'text')
-          .map(b => b.text)
-          .join('');
+      const geminiData = await geminiRes.json();
+      const candidate = geminiData.candidates?.[0];
+      if (!candidate) {
+        finalText = 'Sorry, I could not process that.';
         break;
       }
 
-      if (claudeData.stop_reason === 'tool_use') {
-        const toolBlocks = claudeData.content.filter(b => b.type === 'tool_use');
-        loopMessages.push({ role: 'assistant', content: claudeData.content });
+      const parts = candidate.content?.parts || [];
+      const finishReason = candidate.finishReason;
 
-        // Run all tools in parallel
-        const results = await Promise.all(
-          toolBlocks.map(async tb => ({
-            type: 'tool_result',
-            tool_use_id: tb.id,
-            content: await executeTool(tb.name, tb.input),
-          }))
+      // Check for function calls
+      const funcCalls = parts.filter(p => p.functionCall);
+
+      if (funcCalls.length > 0) {
+        // Add model's response (with function calls) to history
+        geminiContents.push({ role: 'model', parts });
+
+        // Execute all tool calls in parallel
+        const funcResults = await Promise.all(
+          funcCalls.map(async p => {
+            const result = await executeTool(p.functionCall.name, p.functionCall.args || {});
+            return {
+              functionResponse: {
+                name: p.functionCall.name,
+                response: { result },
+              },
+            };
+          })
         );
-        loopMessages.push({ role: 'user', content: results });
+
+        // Add tool results as user turn
+        geminiContents.push({ role: 'user', parts: funcResults });
         continue;
       }
 
-      // Fallback
-      finalText = claudeData.content
-        ?.filter(b => b.type === 'text').map(b => b.text).join('')
-        || 'Sorry, I could not process that.';
+      // No function calls — extract text response
+      finalText = parts
+        .filter(p => p.text)
+        .map(p => p.text)
+        .join('') || 'Sorry, I could not process that.';
       break;
     }
 
